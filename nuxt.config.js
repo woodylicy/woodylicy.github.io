@@ -34,12 +34,20 @@ export default {
 
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
+    '@nuxtjs/axios',
   ],
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
     transpile: [/^element-ui/],
   },
+
+  // axios: {
+  //   baseURL: 'https://script.google.com/',
+  //   proxyHeaders: false,
+  //   credentials: false
+  // },
+
   generate: {
     dir: 'docs'
   },
