@@ -10,20 +10,24 @@
           <el-form-item label="API">
             <el-input v-model="googleSheet.api"></el-input>
           </el-form-item>
+          <el-form-item>
+            <el-button @click.native="getGoogleSheetData()">取得資料</el-button>
+          </el-form-item>
         </el-form>
       </div>
-      <input type="button" @click="getGoogleSheetData()" value="取得資料" />
-      <div v-if="googleSheet.colCounts">
+      <div class="sheet-info" v-if="googleSheet.colCounts">
+        <h4>Google Sheet資訊</h4>
         <div>欄位：{{ googleSheet.colCounts }}</div>
         <div>資料筆數：{{ googleSheet.data.length }}</div>
       </div>
-      <div v-if="googleSheet.colCounts">
-        <div
-          v-for="(filter, index) in filters"
-          :key="index"
-          style="display: flex"
-        >
-          <el-select v-model="filter.col" placeholder="请選擇">
+      <div class="filter-data" v-if="googleSheet.data.length">
+        <h4>
+          篩選資料
+          <i class="el-icon-circle-plus-outline" @click="addFilter()"></i>
+        </h4>
+        <div v-for="(filter, index) in filters" :key="index">
+          <i class="el-icon-circle-close" @click="delFilter(index)"></i>
+          <el-select v-model="filter.col" placeholder="請選擇">
             <el-option
               v-for="(value, key) in googleSheet.columns"
               :key="key"
@@ -32,17 +36,47 @@
             >
             </el-option>
           </el-select>
-          <el-input type="text" v-model="filter.text" />
-          <el-button @click.native="checkFilterData(filter)">確認資料</el-button>
+          <el-input
+            type="text"
+            v-model="filter.text"
+            placeholder="輸入篩選條件"
+          />
+          <el-button @click.native="checkFilterData(filter)"
+            >確認資料</el-button
+          >
           <el-checkbox v-model="filter.reg">正規表示</el-checkbox>
         </div>
       </div>
       <el-drawer :title="drawer.title" :visible.sync="drawer.isOpen">
         <div>
-          <span v-for="key in drawerDataKeysAry" :key="key">{{ key }} : {{ drawer.data[key] }}</span>
+          <span v-for="key in drawerDataKeysAry" :key="key"
+            >{{ key }} : {{ drawer.data[key] }}</span
+          >
         </div>
       </el-drawer>
-      <p v-if="googleSheet.data.length">共{{ statistics }}筆</p>
+      <div class="statistic" v-if="googleSheet.data.length">
+        <el-divider></el-divider>
+        <div>
+          <span>共{{ filterDataAry.length }}筆，</span>
+          <el-select v-model="filterData.selectCol" placeholder="請選擇">
+            <el-option
+              v-for="(value, key) in googleSheet.columns"
+              :key="key"
+              :label="value"
+              :value="key"
+            >
+            </el-option>
+          </el-select>
+        </div>
+        <div v-if="filterData.selectCol">
+          <dl>
+            <dt>{{ googleSheet.columns[filterData.selectCol] }}</dt>
+            <dd v-for="key in dataStatisticsKeysAry" :key="key">
+              {{ key }} : {{ dataStatistics[key] }}
+            </dd>
+          </dl>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -58,19 +92,11 @@ export default {
         colCounts: 0,
         data: [],
       },
-      value: "0",
-      num: "0",
-      filter: "",
       filters: [
         {
-          col: "2",
-          text: "女",
+          col: "0",
+          text: "",
           reg: false,
-        },
-        {
-          col: "4",
-          text: "化學",
-          reg: true,
         },
       ],
       drawer: {
@@ -78,10 +104,16 @@ export default {
         title: "",
         data: {},
       },
+      filterData: {
+        selectCol: "",
+      },
     };
   },
+  mounted() {
+    // this.getGoogleSheetData()
+  },
   computed: {
-    statistics() {
+    filterDataAry() {
       return this.filters.reduce((dataAry, filter) => {
         return dataAry.filter((obj) => {
           if (filter.reg) {
@@ -90,11 +122,29 @@ export default {
             return obj[filter.col].includes(filter.text);
           }
         });
-      }, this.googleSheet.data).length;
+      }, this.googleSheet.data);
     },
-    drawerDataKeysAry(){
-      return Object.keys(this.drawer.data).sort((a,b)=>a.length-b.length)
-    }
+    dataStatistics() {
+      return this.filterDataAry.reduce((optObj, dataObj) => {
+        dataObj[this.filterData.selectCol].split("||").map((el) => {
+          el = el.trim().toLocaleUpperCase();
+          if (optObj[el]) {
+            optObj[el] += 1;
+          } else {
+            optObj[el] = 1;
+          }
+        });
+        return optObj;
+      }, {});
+    },
+    dataStatisticsKeysAry() {
+      return Object.keys(this.dataStatistics).sort(
+        (a, b) => a.length - b.length
+      );
+    },
+    drawerDataKeysAry() {
+      return Object.keys(this.drawer.data).sort((a, b) => a.length - b.length);
+    },
   },
   methods: {
     getGoogleSheetData() {
@@ -135,18 +185,21 @@ export default {
         });
     },
     checkFilterData(filter) {
-
-      let data = this.googleSheet.data.filter(obj=>{
+      let data = this.googleSheet.data.filter((obj) => {
         if (filter.reg) {
-            return new RegExp(filter.text.trim()).test(obj[filter.col]);
-          } else {
-            return obj[filter.col].includes(filter.text);
-          }
-      })
+          return new RegExp(filter.text.trim().toLocaleUpperCase()).test(
+            obj[filter.col]
+          );
+        } else {
+          return obj[filter.col].includes(
+            filter.text.trim().toLocaleUpperCase()
+          );
+        }
+      });
 
       let dataCount = data.reduce((optObj, dataObj) => {
         dataObj[filter.col].split("||").map((el) => {
-          el = el.trim();
+          el = el.trim().toLocaleUpperCase();
           if (optObj[el]) {
             optObj[el] += 1;
           } else {
@@ -159,6 +212,18 @@ export default {
       this.drawer.isOpen = true;
       this.drawer.title = this.googleSheet.columns[filter.col];
       this.drawer.data = dataCount;
+    },
+    addFilter(){
+      this.filters.push(
+        {
+          col: "0",
+          text: "",
+          reg: false,
+        }
+        )
+    },
+    delFilter(index){
+      this.filters.splice(index, 1)
     },
   },
 };
@@ -176,9 +241,26 @@ export default {
 .el-drawer__body {
   span {
     display: block;
-    margin: 0px 5px 4px 0px;
-    padding: 2px;
+    margin: 0 0 5px;
     background-color: #ccc;
   }
+}
+.filter-data {
+  h4 {
+    text-align: left;
+  }
+  .el-input {
+    width: auto;
+  }
+  + div {
+    display: flex;
+  }
+  i {
+    cursor: pointer;
+    font-size: 18px;
+  }
+}
+.sheet-info, .statistic {
+  text-align: left;
 }
 </style>
