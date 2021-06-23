@@ -247,7 +247,18 @@ export default {
     },
   },
   methods: {
+    checkInput() {
+      if (
+        this.googleSheet.url.trim()==='' ||
+        this.googleSheet.api.trim()==='' ||
+        this.googleSheet.sheetTag.trim()===''
+      ) {
+        return false;
+      }
+      return true
+    },
     getGoogleSheetData() {
+      if(!this.checkInput()){this.alertMessage("請填入試算表資訊", "error");return }
       this.fullScreenLoading = true;
       let params = {
         sheetUrl: this.googleSheet.url,
@@ -323,12 +334,12 @@ export default {
             );
             this.fullScreenLoading = false;
           }).fail(() => {
-            this.alertMessage("取得資料失敗", "error");
+            this.alertMessage("取得資料失敗，請確認填入的資料是否正確", "error");
             this.fullScreenLoading = false;
           });
         })
         .fail(() => {
-          this.alertMessage("取得資料失敗", "error");
+          this.alertMessage("取得資料失敗，請確認填入的資料是否正確", "error");
           this.fullScreenLoading = false;
         });
     },
