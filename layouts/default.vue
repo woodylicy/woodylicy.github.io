@@ -24,6 +24,9 @@ html {
   box-sizing: border-box;
 }
 
+body{
+  background-color: rgb(253, 247, 235);
+}
 /* *,
 *::before,
 *::after {
